@@ -84,15 +84,31 @@ end_event.record()
 torch.cuda.synchronize()
 gemm_int8_scaled_latency = start_event.elapsed_time(end_event) / num_iterations
 
+# 计算 FLOPS (GEMM 的计算量: 2*M*N*K)
+flops = 2 * M * N * K
+
+# 计算 TFLOPS (FLOPS / (时间(秒) * 10^12))
+bf16_tflops = flops / (bf16_latency * 1e-3) / 1e12
+int8_tflops = flops / (int8_latency * 1e-3) / 1e12
+gemm_int8_tflops = flops / (gemm_int8_latency * 1e-3) / 1e12
+gemm_int8_scaled_tflops = flops / (gemm_int8_scaled_latency * 1e-3) / 1e12
+
 # 输出结果
 print(f"\n矩阵维度: M={M}, K={K}, N={N}")
+print(f"总计算量: {flops / 1e9:.2f} GFLOPS")
 print(f"迭代次数: {num_iterations}")
-print(f"\nbf16 GEMM 平均时延: {bf16_latency:.4f} ms")
-print(f"int8 GEMM (torch._int_mm) 平均时延: {int8_latency:.4f} ms")
-print(f"int8 GEMM (gemm_int8.matmul) 平均时延: {gemm_int8_latency:.4f} ms")
-print(f"int8 GEMM (gemm_int8.matmul_blockwise_scaled) 平均时延: {gemm_int8_scaled_latency:.4f} ms")
-print(f"\n加速比 (bf16 vs torch._int_mm): {bf16_latency / int8_latency:.2f}x")
-print(f"加速比 (bf16 vs gemm_int8): {bf16_latency / gemm_int8_latency:.2f}x")
-print(f"加速比 (bf16 vs gemm_int8_scaled): {bf16_latency / gemm_int8_scaled_latency:.2f}x")
-print(f"加速比 (torch._int_mm vs gemm_int8): {int8_latency / gemm_int8_latency:.2f}x")
-print(f"加速比 (gemm_int8 vs gemm_int8_scaled): {gemm_int8_latency / gemm_int8_scaled_latency:.2f}x")
+
+print(f"\n{'算子':<40} {'时延(ms)':<12} {'TFLOPS':<10}")
+print("=" * 65)
+print(f"{'bf16 GEMM (torch.matmul)':<40} {bf16_latency:<12.4f} {bf16_tflops:<10.2f}")
+print(f"{'int8 GEMM (torch._int_mm)':<40} {int8_latency:<12.4f} {int8_tflops:<10.2f}")
+print(f"{'int8 GEMM (gemm_int8.matmul)':<40} {gemm_int8_latency:<12.4f} {gemm_int8_tflops:<10.2f}")
+print(f"{'int8 GEMM (gemm_int8.matmul_blockwise_scaled)':<40} {gemm_int8_scaled_latency:<12.4f} {gemm_int8_scaled_tflops:<10.2f}")
+
+print(f"\n{'加速比对比':<50} {'倍数':<10}")
+print("=" * 65)
+print(f"{'bf16 vs torch._int_mm':<50} {bf16_latency / int8_latency:<10.2f}x")
+print(f"{'bf16 vs gemm_int8':<50} {bf16_latency / gemm_int8_latency:<10.2f}x")
+print(f"{'bf16 vs gemm_int8_scaled':<50} {bf16_latency / gemm_int8_scaled_latency:<10.2f}x")
+print(f"{'torch._int_mm vs gemm_int8':<50} {int8_latency / gemm_int8_latency:<10.2f}x")
+print(f"{'gemm_int8 vs gemm_int8_scaled':<50} {gemm_int8_latency / gemm_int8_scaled_latency:<10.2f}x")
