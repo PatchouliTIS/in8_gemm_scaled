@@ -1,0 +1,3 @@
+[submodule "gemm-int8"]
+	path = gemm-int8
+	url = https://github.com/PatchouliTIS/gemm-int8.git
